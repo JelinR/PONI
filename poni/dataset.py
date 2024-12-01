@@ -15,6 +15,8 @@ import skimage.morphology as skmp
 
 from PIL import Image, ImageFont, ImageDraw
 from torch.utils.data import Dataset
+
+
 from poni.geometry import (
     spatial_transform_map,
     crop_map,
@@ -60,6 +62,7 @@ class SemanticMapDataset(Dataset):
     ):
         self.cfg = cfg
         self.dset = cfg.dset_name
+
         # Seed the dataset
         if seed is None:
             random.seed(cfg.seed)
@@ -67,6 +70,7 @@ class SemanticMapDataset(Dataset):
         else:
             random.seed(seed)
             np.random.seed(seed)
+
         # Load maps
         maps_path = sorted(glob.glob(osp.join(cfg.root, "*.h5")))
         # Load json info
@@ -74,6 +78,7 @@ class SemanticMapDataset(Dataset):
         maps = {}
         names = []
         maps_xyz_info = {}
+
         for path in maps_path:
             scene_name = path.split('/')[-1].split('.')[0]
             if scene_name not in SPLIT_SCENES[self.dset][split]:
@@ -375,8 +380,12 @@ class SemanticMapDataset(Dataset):
     @staticmethod
     def visualize_map(semmap, bg=1.0, dataset='gibson'):
         n_cat = semmap.shape[0] - 2 # Exclude floor and wall
+
+        #Outputs a 2D map with pixels containing object labels
         def compress_semmap(semmap):
             c_map = np.zeros((semmap.shape[1], semmap.shape[2]))
+
+            #In the 2D map (c_map), each pixel is labelled by the corresponding object label
             for i in range(semmap.shape[0]):
                 c_map[semmap[i] > 0.] = i+1
             return c_map
@@ -386,19 +395,22 @@ class SemanticMapDataset(Dataset):
             230, 230, 230, # Free space
             77, 77, 77, # Obstacles
         ]
+
         if dataset == 'gibson':
             palette += [int(x * 255.) for x in gibson_palette[15:]]
         else:
             palette += [c for color in d3_40_colors_rgb[:n_cat]
                         for c in color.tolist()]
+            
         semmap = asnumpy(semmap)
         c_map = compress_semmap(semmap)
         semantic_img = Image.new("P", (c_map.shape[1], c_map.shape[0]))
         semantic_img.putpalette(palette)
-        semantic_img.putdata((c_map.flatten() % 40).astype(np.uint8))
+        semantic_img.putdata((c_map.flatten() % 40).astype(np.uint8))       #TODO: Is 40 needed when not working with gibson?
         semantic_img = semantic_img.convert("RGB")
         semantic_img = np.array(semantic_img)
 
+        #Shape: (H, W, 3)
         return semantic_img
 
     @staticmethod
@@ -409,27 +421,48 @@ class SemanticMapDataset(Dataset):
         semmap - (C, H, W)
         object_pfs - (C, H, W)
         """
-        in_semmap = asnumpy(in_semmap)
+        in_semmap = asnumpy(in_semmap)  #TODO: What is in_semmap?
         semmap = asnumpy(semmap)
+
+        #Map (H, W, 3) with colored object labels
         semmap_rgb = SemanticMapDataset.visualize_map(in_semmap, bg=1.0, dataset=dataset)
+        
+        #Creates matrix (H, W, 3) colored red (each entry is : [255, 0, 0])
         red_image = np.zeros_like(semmap_rgb)
         red_image[..., 0] = 255
+
         object_pfs = asnumpy(object_pfs)
         vis_ims = []
+
+        #Iterates through the object channels
         for i in range(0, semmap.shape[0]):
-            opf = object_pfs[i][..., np.newaxis]
+            opf = object_pfs[i][..., np.newaxis]    #(H, W, 1)
+
+            #Creates map with object potentials colored red and rest is semmap_rgb
+            #Shape: (H, W, 3)
             sm = np.copy(semmap_rgb)
             smpf = red_image * opf + sm * (1 - opf)
             smpf = smpf.astype(np.uint8)
-            # Highlight directions
+
+            # Highlight directions: 
+            # Draws a line from current location pointing towards the direction the object is located at
+            #TODO: Confirm this is the interpretation
             if dirs is not None and dirs[i] is not None:
                 dir = math.radians(dirs[i])
+
+                #Start coords
                 sx, sy = sm.shape[1] // 2, sm.shape[0] // 2
+
+                #End coords
                 ex = int(sx + 200 * math.cos(dir))
                 ey = int(sy + 200 * math.sin(dir))
+
+                #Draws a line from start to end point colored green with thickness 3
                 cv2.line(smpf, (sx, sy), (ex, ey), (0, 255, 0), 3)
-            # Highlight object locations
+
+            # Highlight object locations with blue color
             smpf[semmap[i] > 0, :] = np.array([0, 0, 255])
+
             # Highlight location targets
             if locs is not None:
                 H, W = semmap.shape[1:]
@@ -437,8 +470,10 @@ class SemanticMapDataset(Dataset):
                 if x >= 0 and y >= 0:
                     x, y = int(x * W), (y * H)
                     cv2.circle(smpf, (x, y), 3, (0, 255, 0), -1)
+
             vis_ims.append(smpf)
 
+        #Shape: (C, H, W, 3)
         return vis_ims
 
     @staticmethod
@@ -449,10 +484,13 @@ class SemanticMapDataset(Dataset):
         cat_id - integer
         """
         semmap = asnumpy(semmap)
+
         offset = OBJECT_CATEGORIES[dset].index('chair')
         object_pfs = asnumpy(object_pfs)[cat_id + offset] # (H, W)
-        object_pfs = object_pfs[..., np.newaxis] # (H, W)
+        object_pfs = object_pfs[..., np.newaxis] # (H, W, 1)
+
         semmap_rgb = SemanticMapDataset.visualize_map(semmap, bg=1.0, dataset=dset)
+
         red_image = np.zeros_like(semmap_rgb)
         red_image[..., 0] = 255
         smpf = red_image * object_pfs + semmap_rgb * (1 - object_pfs)
@@ -467,10 +505,16 @@ class SemanticMapDataset(Dataset):
         """
         semmap = asnumpy(semmap)
         pfs = asnumpy(area_pfs)[0] # (H, W)
-        pfs = pfs[..., np.newaxis] # (H, W)
+        pfs = pfs[..., np.newaxis] # (H, W, 1)
+
+        #Returns rgb map (H, W, 3) with colored object labels
         semmap_rgb = SemanticMapDataset.visualize_map(semmap, bg=1.0, dataset=dset)
+
+        #Creates a (H, W, 3) matrix colored red ([255, 0, 0])
         red_image = np.zeros_like(semmap_rgb)
         red_image[..., 0] = 255
+
+        #Shows pfs as red and other regions as semmap_rgb 
         smpf = red_image * pfs + semmap_rgb * (1 - pfs)
         smpf = smpf.astype(np.uint8)
         
@@ -485,10 +529,12 @@ class SemanticMapDataset(Dataset):
         img_and_titles = [
             (in_semmap, 'Input map'), (out_semmap, 'Full output map')
         ]
+
         if gt_area_pfs is not None:
             img_and_titles.append((gt_area_pfs, 'GT Area map'))
         if pred_area_pfs is not None:
             img_and_titles.append((pred_area_pfs, 'Pred Area map'))
+            
         for i, cat in INV_OBJECT_CATEGORY_MAP[dset].items():
             acts_suffix = ''
             if gt_acts is not None:

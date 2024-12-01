@@ -28,6 +28,7 @@ class SemanticMapperModule(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
+
         # Define loss functions
         object_loss_type = self.cfg.MODEL.object_loss_type
         assert object_loss_type in ["bce", "l1", "l2", "xent"]
@@ -35,6 +36,7 @@ class SemanticMapperModule(nn.Module):
         area_loss_type = self.cfg.MODEL.area_loss_type
         assert area_loss_type in ["bce", "l1", "l2"]
         self.area_loss_fn = get_loss_fn(area_loss_type)
+
         # Define models
         ndirs = None
         self.dirs_map = None
@@ -43,10 +45,12 @@ class SemanticMapperModule(nn.Module):
         ndirs = len(self.cfg.DATASET.prediction_directions)
         enable_locations = self.cfg.DATASET.enable_locations
         enable_actions = self.cfg.DATASET.enable_actions
+
         assert not (enable_locations and enable_directions)
         assert not (enable_actions and enable_directions)
         assert not (enable_actions and enable_locations)
         enable_area_head = self.cfg.DATASET.enable_unexp_area
+
         if enable_directions:
             assert object_loss_type == "xent"
             assert self.cfg.MODEL.object_activation == "none"
@@ -70,19 +74,25 @@ class SemanticMapperModule(nn.Module):
             self.cfg.defrost()
             self.cfg.MODEL.enable_area_head = enable_area_head
             self.cfg.freeze()
+
+        
         (
             self.encoder,
             self.object_decoder,
             self.area_decoder,
         ) = get_semantic_encoder_decoder(self.cfg)
+
+
         # Define optimizer
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg.OPTIM.lr)
+
         # Define scheduler
         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
             self.optimizer,
             milestones=cfg.OPTIM.lr_sched_milestones,
             gamma=cfg.OPTIM.lr_sched_gamma,
         )
+        
         # Define activation functions
         self.object_activation = get_activation_fn(self.cfg.MODEL.object_activation)
         self.area_activation = get_activation_fn(self.cfg.MODEL.area_activation)

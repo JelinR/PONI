@@ -278,11 +278,13 @@ def get_semantic_encoder_decoder(cfg):
     encoder, object_decoder, area_decoder = None, None, None
     output_type = model_cfg.output_type
     assert output_type in ["map", "dirs", "locs", "acts"]
+
     encoder = UNetEncoder(
         model_cfg.num_categories,
         model_cfg.nsf,
         model_cfg.embedding_size,
     )
+
     if output_type == "map":
         object_decoder = UNetDecoder(
             model_cfg.num_categories,
@@ -299,6 +301,8 @@ def get_semantic_encoder_decoder(cfg):
         object_decoder = ActionDecoder(
             model_cfg.num_categories, model_cfg.nsf, data_cfg.num_actions
         )
+
+        
     if model_cfg.enable_area_head:
         area_decoder = UNetDecoder(
             1,
