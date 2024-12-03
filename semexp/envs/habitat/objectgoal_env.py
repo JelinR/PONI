@@ -42,18 +42,22 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         self.args = args
         self.rank = rank
         self.cat_offset = self.args.object_cat_offset
+
         if args.use_gt_segmentation:
             config_env.defrost()
+
             H = config_env.SIMULATOR.DEPTH_SENSOR.HEIGHT
             W = config_env.SIMULATOR.DEPTH_SENSOR.WIDTH
             hfov = config_env.SIMULATOR.DEPTH_SENSOR.HFOV
             pos = config_env.SIMULATOR.DEPTH_SENSOR.POSITION
             ori = config_env.SIMULATOR.DEPTH_SENSOR.ORIENTATION
+
             config_env.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = H
             config_env.SIMULATOR.SEMANTIC_SENSOR.WIDTH = W
             config_env.SIMULATOR.SEMANTIC_SENSOR.HFOV = hfov
             config_env.SIMULATOR.SEMANTIC_SENSOR.POSITION = pos
             config_env.SIMULATOR.SEMANTIC_SENSOR.ORIENTATION = ori
+
             config_env.SIMULATOR.AGENT_0.SENSORS.append("SEMANTIC_SENSOR")
             config_env.TASK.SEMANTIC_CATEGORY_SENSOR.HEIGHT = H
             config_env.TASK.SEMANTIC_CATEGORY_SENSOR.WIDTH = W
@@ -126,6 +130,7 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         self.info["oinsts"] = None
         self.info["ocats"] = None
         self.info["goal_distance"] = None
+
         # States for computing rewards
         self.reward_states = {}
         self.reward_states["object_categories_visited"] = None
@@ -506,7 +511,9 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         state = [rgb, depth]
         if args.use_gt_segmentation:
             state.append(obs["semantic_category"][..., np.newaxis])
+
         state = np.concatenate(state, axis=2).transpose(2, 0, 1)
+        
         self.last_sim_location = self.get_sim_location()
         agent_state = super().habitat_env.sim.get_agent_state(0)
         self.episode_start_position = np.copy(agent_state.position)

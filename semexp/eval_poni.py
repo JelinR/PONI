@@ -320,6 +320,8 @@ def main(args=None):
         # set unexplored to navigable by default
         p_input["map_pred"] = obs_map * np.rint(exp_map)
         p_input["pose_pred"] = planner_pose_inputs[e]
+
+
     _, fmm_dists = envs.get_reachability_map(planner_inputs)
 
     g_rollouts.obs[0].copy_(global_input)
@@ -407,6 +409,7 @@ def main(args=None):
                 p_input["obs_map"] = obs_map
                 p_input["exp_map"] = exp_map
                 p_input["pose_pred"] = planner_pose_inputs[e]
+
             frontier_maps = envs.get_frontier_map(planner_inputs)
             for e in range(num_scenes):
                 fmap = frontier_maps[e].cpu().numpy()
@@ -472,7 +475,9 @@ def main(args=None):
         if args.visualize or args.print_images:
             local_map[e, -1, :, :] = 1e-5
             p_input["sem_map_pred"] = local_map[e, 4:, :, :].argmax(0).cpu().numpy()
+
             p_input["pf_pred"] = pf_visualizations[e]
+
             obs[e, -1, :, :] = 1e-5
             p_input["sem_seg"] = obs[e, 4:].argmax(0).cpu().numpy()
 
@@ -788,7 +793,9 @@ def main(args=None):
             if args.visualize or args.print_images:
                 local_map[e, -1, :, :] = 1e-5
                 p_input["sem_map_pred"] = local_map[e, 4:, :, :].argmax(0).cpu().numpy()
+
                 p_input["pf_pred"] = pf_visualizations[e]
+                
                 obs[e, -1, :, :] = 1e-5
                 p_input["sem_seg"] = obs[e, 4:].argmax(0).cpu().numpy()
 

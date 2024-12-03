@@ -28,10 +28,13 @@ def draw_line(start, end, mat, steps=25, w=1):
 
 def init_vis_image(goal_name, legend, num_pf_maps=0, add_sem_seg=False):
     H, W = 655, 1165
+
     if add_sem_seg:
         W += 15 + 640
+
     if num_pf_maps > 0:
         W += (15 + 480) * num_pf_maps
+        
     vis_image = np.ones((H, W, 3)).astype(np.uint8) * 255
     font = cv2.FONT_HERSHEY_SIMPLEX
     fontScale = 1

@@ -31,8 +31,9 @@ class SemanticMapperModule(nn.Module):
 
         # Define loss functions
         object_loss_type = self.cfg.MODEL.object_loss_type
-        assert object_loss_type in ["bce", "l1", "l2", "xent"]
+        assert object_loss_type in ["bce", "l1", "l2", "xent"]        
         self.object_loss_fn = get_loss_fn(object_loss_type)
+        
         area_loss_type = self.cfg.MODEL.area_loss_type
         assert area_loss_type in ["bce", "l1", "l2"]
         self.area_loss_fn = get_loss_fn(area_loss_type)
@@ -51,6 +52,7 @@ class SemanticMapperModule(nn.Module):
         assert not (enable_actions and enable_locations)
         enable_area_head = self.cfg.DATASET.enable_unexp_area
 
+        #TODO: What do these mean?
         if enable_directions:
             assert object_loss_type == "xent"
             assert self.cfg.MODEL.object_activation == "none"
@@ -100,9 +102,11 @@ class SemanticMapperModule(nn.Module):
     def forward(self, x):
         embedding = self.encoder(x)
         object_preds = self.object_activation(self.object_decoder(embedding))
+
         area_preds = None
         if self.area_decoder is not None:
             area_preds = self.area_activation(self.area_decoder(embedding))
+
         return object_preds, area_preds
 
     def get_inv_dists_map(self, x):
@@ -144,8 +148,10 @@ class SemanticMapperModule(nn.Module):
             pred_dir_ixs = pred_dir_ixs.view(-1)  # (B * N)
             pred_dirs = torch.gather(angles, 0, pred_dir_ixs)
             pred_dirs = pred_dirs.view(B, N, 1, 1)  # (B, N, 1, 1)
+            
             # Identify frontiers
             frontiers = self.calculate_frontiers(x)  # (B, 1, H, W)
+            
             # Select the nearest frontier point along the predicted direction
             if self.dirs_map is None:
                 self.dirs_map, self.inv_dists_map = self.get_inv_dists_map(x)
@@ -198,6 +204,7 @@ class SemanticMapperModule(nn.Module):
             ####################################################################
             # object_preds - (B, N, 4)
             assert not avg_preds
+        
         # By default, average the two predictions and return it.
         if avg_preds:
             outputs = object_preds

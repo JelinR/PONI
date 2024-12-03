@@ -73,6 +73,7 @@ class SemanticMapDataset(Dataset):
 
         # Load maps
         maps_path = sorted(glob.glob(osp.join(cfg.root, "*.h5")))
+        
         # Load json info
         maps_info = json.load(open(osp.join(cfg.root, 'semmap_GT_info.json')))
         maps = {}
@@ -254,6 +255,8 @@ class SemanticMapDataset(Dataset):
         for i in range(len(locations)):
             y, x = locations[i]
             y, x = int(y), int(x)
+
+            #Marks a square region around loc with ones
             if self.cfg.masking_shape == 'square':
                 S = int(self.visibility_size / self.grid_size / 2.0)
                 vis_map[(y - S) : (y + S), (x - S) : (x + S)] = 1

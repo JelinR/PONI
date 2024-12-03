@@ -8,6 +8,7 @@ from semexp.utils.model import ChannelPool, Flatten, get_grid, NNBase
 from torch.nn import functional as F
 
 
+
 class Goal_Oriented_Semantic_Policy(NNBase):
     def __init__(
         self,
@@ -217,6 +218,7 @@ class Semantic_Mapping(nn.Module):
             .float()
             .to(self.device)
         )
+
         self.feat = (
             torch.ones(
                 args.num_processes,
@@ -258,11 +260,13 @@ class Semantic_Mapping(nn.Module):
         xy_resolution = self.resolution
         z_resolution = self.z_resolution
         vision_range = self.vision_range
+
         XYZ_cm_std = agent_view_centered_t.float()
         XYZ_cm_std[..., :2].div_(xy_resolution)
         XYZ_cm_std[..., :2].sub_(vision_range // 2.0).div_(vision_range / 2.0)
         XYZ_cm_std[..., 2].div_(z_resolution)
         XYZ_cm_std[..., 2].sub_((max_h + min_h) // 2.0).div_((max_h - min_h) / 2.0)
+        
         self.feat[:, 1:, :] = nn.AvgPool2d(self.du_scale)(obs[:, 4:, :, :]).view(
             bs, c - 4, h // self.du_scale * w // self.du_scale
         )

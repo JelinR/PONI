@@ -11,6 +11,7 @@ from torch.nn import functional as F
 from train import SemanticMapperModule as PFModel
 
 
+
 class Potential_Function_Semantic_Policy(nn.Module):
     def __init__(self, pf_model_path):
         super().__init__()
@@ -18,7 +19,10 @@ class Potential_Function_Semantic_Policy(nn.Module):
         loaded_state = torch.load(pf_model_path, map_location="cpu")
         pf_model_cfg = get_cfg()
         pf_model_cfg.merge_from_other_cfg(loaded_state["cfg"])
+
+        #TODO: Check PFModel
         self.pf_model = PFModel(pf_model_cfg)
+
         # Remove dataparallel modules
         state_dict = {
             k.replace(".module", ""): v for k, v in loaded_state["state_dict"].items()
@@ -283,8 +287,10 @@ class RL_Policy(nn.Module):
             semmap = semantic_maps[i]
             pfs = pred_maps["pfs"][i]
             cat_id = goal_cat_ids[i].cpu().item()
+
             pfs_rgb = PFDataset.visualize_object_category_pf(semmap, pfs, cat_id, dset)
             vis_maps_i["pfs"] = pfs_rgb
+
             if "raw_pfs" in pred_maps and pred_maps["raw_pfs"] is not None:
                 raw_pfs = pred_maps["raw_pfs"][i]
                 raw_pfs_rgb = PFDataset.visualize_object_category_pf(
@@ -294,10 +300,12 @@ class RL_Policy(nn.Module):
                     dset,
                 )
                 vis_maps_i["raw_pfs"] = raw_pfs_rgb
+
             if "area_pfs" in pred_maps and pred_maps["area_pfs"] is not None:
                 area_pfs = pred_maps["area_pfs"][i]
                 area_pfs_rgb = PFDataset.visualize_area_pf(semmap, area_pfs, dset=dset)
                 vis_maps_i["area_pfs"] = area_pfs_rgb
+
             vis_maps.append(vis_maps_i)
         return vis_maps
 

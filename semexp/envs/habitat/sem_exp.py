@@ -10,6 +10,7 @@ import semexp.envs.utils.pose as pu
 import skimage.morphology
 import torch
 from PIL import Image
+
 from poni.geometry import crop_map, crop_map_with_pad, spatial_transform_map
 from semexp.agents.utils.semantic_prediction import SemanticPredMaskRCNN
 from semexp.constants import color_palette
@@ -78,6 +79,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
 
         obs, info = super().reset()
         obs = self._preprocess_obs(obs)
+
         self.starting_map_loc_and_ort = self.sim_continuous_to_sim_map(
             self.get_sim_location()
         )
@@ -170,6 +172,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
             action = planner_inputs["atomic_action"]
         else:
             action = self._plan(planner_inputs)
+
         planning_time = time.time() - start_time
 
         if self.args.visualize or self.args.print_images:
@@ -722,6 +725,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         sem_seg_vis = cv2.resize(
             sem_seg_vis, (640, 480), interpolation=cv2.INTER_NEAREST
         )
+        
         self.vis_image[50:530, 15:655] = self.rgb_vis
         self.vis_image[50:530, 670:1150] = sem_map_vis
         self.vis_image[50:530, 1165:1805] = sem_seg_vis
